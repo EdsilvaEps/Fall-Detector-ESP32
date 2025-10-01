@@ -5,6 +5,7 @@
 #include "model.h" // generated TFLite model header
 #include <tflm_esp32.h>
 #include "eloquent_tinyml.h"
+//#include "EloquentTinyML.h"
 //#include "eloquent_tinyml/tensorflow.h"
 
 // global vars
