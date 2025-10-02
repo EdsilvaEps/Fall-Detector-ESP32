@@ -3,10 +3,16 @@
 #include <Adafruit_Sensor.h>
 #include <Wire.h>
 #include "model.h" // generated TFLite model header
-#include <tflm_esp32.h>
-#include "eloquent_tinyml.h"
+//#include <tflm_esp32.h>
+//#include "eloquent_tinyml.h"
 //#include "EloquentTinyML.h"
 //#include "eloquent_tinyml/tensorflow.h"
+#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
+#include "tensorflow/lite/micro/micro_interpreter.h"
+#include "tensorflow/lite/micro/system_setup.h"
+#include "tensorflow/lite/schema/schema_generated.h"
+
+
 
 // global vars
 Adafruit_MPU6050 mpu;
@@ -39,26 +45,25 @@ bool bufferFilled = false;
 */
 
 // Model parameters
-constexpr int inputNumber = 1200; // windowsize * 4 (3 accel + 1 timestamp)
-constexpr int outputNumber = 1; // fall vs not-fall
-constexpr int tensorArenaSize = 32 * 1024; // an area of working memory for the model
-constexpr int TF_NUM_OPS = 16; // not too sure what this param means
+//constexpr int inputNumber = 1200; // windowsize * 4 (3 accel + 1 timestamp)
+//constexpr int outputNumber = 1; // fall vs not-fall
+//constexpr int tensorArenaSize = 32 * 1024; // an area of working memory for the model
+//constexpr int TF_NUM_OPS = 16; // not too sure what this param means
 
 
-Eloquent::TF::Sequential<TF_NUM_OPS, tensorArenaSize> tf;
+//Eloquent::TF::Sequential<TF_NUM_OPS, tensorArenaSize> tf;
 
 // TFLite globals
-/*namespace{
+namespace{
 const tflite::Model* fallModel = nullptr; // pointer to the model
-tflite::ErrorReporter* tflErrorReporter =  nullptr; // pointer to the error reporter
-constexpr int tensorArenaSize = 102 * 1024; // an area of working memory for the model
+constexpr int tensorArenaSize = 2000; // an area of working memory for the model
 uint8_t tensorArena[tensorArenaSize]; 
 TfLiteTensor* input = nullptr; // pointer to input tensor
 TfLiteTensor* output = nullptr; // pointer to output tensor
 tflite::MicroInterpreter* interpreter = nullptr;  // pointer to interpreter
 } // namespace
 
-*/
+
 
 // Fall detection state
 bool fallDetected = false;
@@ -100,23 +105,38 @@ void setup() {
   calibrateSensor();
   Serial.println("");
 
- 
-
-  // Initialize Error reporter
-  /*static tflite::MicroErrorReporter micro_error_reporter; // define a micro_Error_reporter instance
-  tflErrorReporter = &micro_error_reporter; // create an errorReporter ptr and assign it to micro_error_reporter
-
   // Load TFLite model
   fallModel = tflite::GetModel(model);
   if (fallModel->version() != TFLITE_SCHEMA_VERSION) 
   {
-      tflErrorReporter->Report(
-      "Model provided is schema version %d not equal "
-      "to supported version %d.",
-      fallModel->version(), TFLITE_SCHEMA_VERSION);
+      MicroPrintf(
+        "Model provided is schema version %d not equal to supported "
+        "version %d.",
+        fallModel->version(), TFLITE_SCHEMA_VERSION
+      );
       return;
-  }*/
+  }
 
+  // Pull in only the operation implementations we need.
+  static tflite::MicroMutableOpResolver<1> resolver;
+  if (resolver.AddFullyConnected() != kTfLiteOk) {
+    return;
+  }
+
+  // Build an interpreter to run the model with.
+  static tflite::MicroInterpreter static_interpreter(fallModel, resolver, tensorArena, tensorArenaSize);
+  interpreter = &static_interpreter;
+
+  // Allocate memory from the tensor_arena for the model's tensors.
+  TfLiteStatus allocate_status = interpreter->AllocateTensors();
+  if (allocate_status != kTfLiteOk) {
+    MicroPrintf("AllocateTensors() failed");
+    return;
+  }
+
+  // Obtain pointers to the model's input and output tensors.
+  input = interpreter->input(0);
+  output = interpreter->output(0);
 
 }
 
