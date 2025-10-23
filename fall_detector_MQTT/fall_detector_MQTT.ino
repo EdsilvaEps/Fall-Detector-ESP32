@@ -91,7 +91,7 @@ void setup() {
 
   mqtt.setServer(MQTT_HOST, MQTT_PORT);
   mqtt.setCallback(callback);
-  mqtt.setBufferSize(8192);
+  mqtt.setBufferSize(18192);
   
   // Initialize MPU6050
   if (!mpu.begin()) {
@@ -248,10 +248,20 @@ void callback(char* topic, byte* payload, unsigned int length) {
 void publishBatch() { // TODO: the AI suggestion of creating a struct for readings is better, we should implement it
   // Build JSON array
   //mqtt.publish(MQTT_TOPIC, "sanity publish", false);
-  String payload = "[";
-  for (int i = 0; i < 10; i++) {
-    if (i > 0) payload += ",";
-    payload += "{\"t_ms\":";
+  
+  String payload = "";
+  for (int i = 0; i < windowSize; i++) {
+    //if (i > 0) payload += ",";
+    payload += String(accelBuffer[i][0], 6);
+    payload += ", ";
+    payload += String(accelBuffer[i][1], 6);
+    payload += ", ";
+    payload += String(accelBuffer[i][2], 6);
+    payload += ", ";
+    payload += accelBuffer[i][3];
+    payload += "\n";
+
+    /*payload += "{\"t_ms\":";
     payload += accelBuffer[i][3];
     payload += ",\"ax\":";
     payload += String(accelBuffer[i][0], 6);
@@ -265,9 +275,10 @@ void publishBatch() { // TODO: the AI suggestion of creating a struct for readin
     payload += String(gyroBuffer[i][1], 6);
     payload += ",\"gz\":";
     payload += String(gyroBuffer[i][2], 6);
-    payload += "}";
+    payload += "}"; */
   }
-  payload += "]";
+  //payload += "]";
+
   Serial.println(payload.c_str());
   mqtt.publish(MQTT_TOPIC, payload.c_str(), false);
   bufferIndex = 0; // Reset buffer
