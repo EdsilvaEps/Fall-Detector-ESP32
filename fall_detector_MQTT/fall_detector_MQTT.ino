@@ -123,7 +123,7 @@ void loop() {
   unsigned long currentTime = millis();
 
   // sample at our target range
-  if(currentTime - lastSampleTime >= (1000 / sampleRate)) {
+  if(currentTime - lastSampleTime >= (500 / sampleRate)) {
     lastSampleTime = currentTime;
 
     // get new sensor readings
@@ -247,7 +247,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 void publishBatch() { // TODO: the AI suggestion of creating a struct for readings is better, we should implement it
   // Build JSON array
-  //mqtt.publish(MQTT_TOPIC, "sanity publish", false);
   
   String payload = "";
   for (int i = 0; i < windowSize; i++) {
@@ -261,25 +260,9 @@ void publishBatch() { // TODO: the AI suggestion of creating a struct for readin
     payload += accelBuffer[i][3];
     payload += "\n";
 
-    /*payload += "{\"t_ms\":";
-    payload += accelBuffer[i][3];
-    payload += ",\"ax\":";
-    payload += String(accelBuffer[i][0], 6);
-    payload += ",\"ay\":";
-    payload += String(accelBuffer[i][1], 6);
-    payload += ",\"az\":";
-    payload += String(accelBuffer[i][2], 6);
-    payload += ",\"gx\":";
-    payload += String(gyroBuffer[i][0], 6);
-    payload += ",\"gy\":";
-    payload += String(gyroBuffer[i][1], 6);
-    payload += ",\"gz\":";
-    payload += String(gyroBuffer[i][2], 6);
-    payload += "}"; */
   }
-  //payload += "]";
 
-  Serial.println(payload.c_str());
+  //Serial.println(payload.c_str());
   mqtt.publish(MQTT_TOPIC, payload.c_str(), false);
   bufferIndex = 0; // Reset buffer
   Serial.println("Window Published");
